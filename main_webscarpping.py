@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 from selectolax.lexbor import LexborHTMLParser
 import json, time
 import pandas as pd
-
+import os
 def get_page(playwright, from_place, to_place, departure_date):
     page = playwright.chromium.launch(headless=False).new_page()
     page.goto('https://www.google.com/travel/flights')
@@ -118,24 +118,56 @@ def extract_flight_data(parser):
     return data
 
 
+def run(playwright, from_place, to_place, start_date, end_date):
+    date_range = pd.date_range(start_date, end_date).strftime('%m-%d-%Y')
+    all_data_df = pd.DataFrame()
 
+    for departure_date in date_range:
+        print(f"Processing {from_place} to {to_place} for {departure_date}...")
 
-def run(playwright):
-    from_place = 'BOM'
-    to_place = 'DEL'
-    departure_date = '11-30-2023'
-    
-    parser = get_page(playwright, from_place, to_place, departure_date)
-    google_flights_results = extract_flight_data(parser)
+        parser = get_page(playwright, from_place, to_place, departure_date)
+        google_flights_results = extract_flight_data(parser)
 
-    # Convert the data to a DataFrame
-    df = pd.DataFrame(google_flights_results)
+        # Convert the data to a DataFrame
+        df = pd.DataFrame(google_flights_results)
 
-    # Save the DataFrame to an Excel file
+        # Add route information and departure date to the DataFrame
+        df['from_place'] = from_place
+        df['to_place'] = to_place
+        df['departure_date'] = departure_date
+
+        # Concatenate the DataFrame to the overall DataFrame
+        all_data_df = pd.concat([all_data_df, df], ignore_index=True)
+
+    return all_data_df
+
+def main():
+    routes = [
+        [{'from_place': 'DEL', 'to_place': 'BOM'}, {'from_place': 'DEL', 'to_place': 'BLR'}, {'from_place': 'DEL', 'to_place': 'HYD'}, {'from_place': 'DEL', 'to_place': 'CCU'}, {'from_place': 'BOM', 'to_place': 'DEL'}, {'from_place': 'BOM', 'to_place': 'BLR'}, {'from_place': 'BOM', 'to_place': 'HYD'}, {'from_place': 'BOM', 'to_place': 'CCU'}, {'from_place': 'BLR', 'to_place': 'DEL'}, {'from_place': 'BLR', 'to_place': 'BOM'}, {'from_place': 'BLR', 'to_place': 'HYD'}, {'from_place': 'BLR', 'to_place': 'CCU'}, {'from_place': 'HYD', 'to_place': 'DEL'}, {'from_place': 'HYD', 'to_place': 'BOM'}, {'from_place': 'HYD', 'to_place': 'BLR'}, {'from_place': 'HYD', 'to_place': 'CCU'}, {'from_place': 'CCU', 'to_place': 'DEL'}, {'from_place': 'CCU', 'to_place': 'BOM'}, {'from_place': 'CCU', 'to_place': 'BLR'}, {'from_place': 'CCU', 'to_place': 'HYD'}, {'from_place': 'ATL', 'to_place': 'DFW'}, {'from_place': 'ATL', 'to_place': 'DEN'}, {'from_place': 'ATL', 'to_place': 'ORD'}, {'from_place': 'ATL', 'to_place': 'DXB'}, {'from_place': 'ATL', 'to_place': 'LAX'}, {'from_place': 'ATL', 'to_place': 'IST'}, {'from_place': 'ATL', 'to_place': 'LHR'}, {'from_place': 'ATL', 'to_place': 'DEL'}, {'from_place': 'ATL', 'to_place': 'CDG'}, {'from_place': 'ATL', 'to_place': 'JFK'}, {'from_place': 'ATL', 'to_place': 'LAS'}, {'from_place': 'DFW', 'to_place': 'ATL'}, {'from_place': 'DFW', 'to_place': 'DEN'}, {'from_place': 'DFW', 'to_place': 'ORD'}, {'from_place': 'DFW', 'to_place': 'DXB'}, {'from_place': 'DFW', 'to_place': 'LAX'}, {'from_place': 'DFW', 'to_place': 'IST'}, {'from_place': 'DFW', 'to_place': 'LHR'}, {'from_place': 'DFW', 'to_place': 'DEL'}, {'from_place': 'DFW', 'to_place': 'CDG'}, {'from_place': 'DFW', 'to_place': 'JFK'}, {'from_place': 'DFW', 'to_place': 'LAS'}, {'from_place': 'DEN', 'to_place': 'ATL'}, {'from_place': 'DEN', 'to_place': 'DFW'}, {'from_place': 'DEN', 'to_place': 'ORD'}, {'from_place': 'DEN', 'to_place': 'DXB'}, {'from_place': 'DEN', 'to_place': 'LAX'}, {'from_place': 'DEN', 'to_place': 'IST'}, {'from_place': 'DEN', 'to_place': 'LHR'}, {'from_place': 'DEN', 'to_place': 'DEL'}, {'from_place': 'DEN', 'to_place': 'CDG'}, {'from_place': 'DEN', 'to_place': 'JFK'}, {'from_place': 'DEN', 'to_place': 'LAS'}, {'from_place': 'ORD', 'to_place': 'ATL'}, {'from_place': 'ORD', 'to_place': 'DFW'}, {'from_place': 'ORD', 'to_place': 'DEN'}, {'from_place': 'ORD', 'to_place': 'DXB'}, {'from_place': 'ORD', 'to_place': 'LAX'}, {'from_place': 'ORD', 'to_place': 'IST'}, {'from_place': 'ORD', 'to_place': 'LHR'}, {'from_place': 'ORD', 'to_place': 'DEL'}, {'from_place': 'ORD', 'to_place': 'CDG'}, {'from_place': 'ORD', 'to_place': 'JFK'}, {'from_place': 'ORD', 'to_place': 'LAS'}, {'from_place': 'DXB', 'to_place': 'ATL'}, {'from_place': 'DXB', 'to_place': 'DFW'}, {'from_place': 'DXB', 'to_place': 'DEN'}, {'from_place': 'DXB', 'to_place': 'ORD'}, {'from_place': 'DXB', 'to_place': 'LAX'}, {'from_place': 'DXB', 'to_place': 'IST'}, {'from_place': 'DXB', 'to_place': 'LHR'}, {'from_place': 'DXB', 'to_place': 'DEL'}, {'from_place': 'DXB', 'to_place': 'CDG'}, {'from_place': 'DXB', 'to_place': 'JFK'}, {'from_place': 'DXB', 'to_place': 'LAS'}, {'from_place': 'LAX', 'to_place': 'ATL'}, {'from_place': 'LAX', 'to_place': 'DFW'}, {'from_place': 'LAX', 'to_place': 'DEN'}, {'from_place': 'LAX', 'to_place': 'ORD'}, {'from_place': 'LAX', 'to_place': 'DXB'}, {'from_place': 'LAX', 'to_place': 'IST'}, {'from_place': 'LAX', 'to_place': 'LHR'}, {'from_place': 'LAX', 'to_place': 'DEL'}, {'from_place': 'LAX', 'to_place': 'CDG'}, {'from_place': 'LAX', 'to_place': 'JFK'}, {'from_place': 'LAX', 'to_place': 'LAS'}, {'from_place': 'IST', 'to_place': 'ATL'}, {'from_place': 'IST', 'to_place': 'DFW'}, {'from_place': 'IST', 'to_place': 'DEN'}, {'from_place': 'IST', 'to_place': 'ORD'}, {'from_place': 'IST', 'to_place': 'DXB'}, {'from_place': 'IST', 'to_place': 'LAX'}, {'from_place': 'IST', 'to_place': 'LHR'}, {'from_place': 'IST', 'to_place': 'DEL'}, {'from_place': 'IST', 'to_place': 'CDG'}, {'from_place': 'IST', 'to_place': 'JFK'}, {'from_place': 'IST', 'to_place': 'LAS'}, {'from_place': 'LHR', 'to_place': 'ATL'}, {'from_place': 'LHR', 'to_place': 'DFW'}, {'from_place': 'LHR', 'to_place': 'DEN'}, {'from_place': 'LHR', 'to_place': 'ORD'}, {'from_place': 'LHR', 'to_place': 'DXB'}, {'from_place': 'LHR', 'to_place': 'LAX'}, {'from_place': 'LHR', 'to_place': 'IST'}, {'from_place': 'LHR', 'to_place': 'DEL'}, {'from_place': 'LHR', 'to_place': 'CDG'}, {'from_place': 'LHR', 'to_place': 'JFK'}, {'from_place': 'LHR', 'to_place': 'LAS'}, {'from_place': 'DEL', 'to_place': 'ATL'}, {'from_place': 'DEL', 'to_place': 'DFW'}, {'from_place': 'DEL', 'to_place': 'DEN'}, {'from_place': 'DEL', 'to_place': 'ORD'}, {'from_place': 'DEL', 'to_place': 'DXB'}, {'from_place': 'DEL', 'to_place': 'LAX'}, {'from_place': 'DEL', 'to_place': 'IST'}, {'from_place': 'DEL', 'to_place': 'LHR'}, {'from_place': 'DEL', 'to_place': 'CDG'}, {'from_place': 'DEL', 'to_place': 'JFK'}, {'from_place': 'DEL', 'to_place': 'LAS'}, {'from_place': 'CDG', 'to_place': 'ATL'}, {'from_place': 'CDG', 'to_place': 'DFW'}, {'from_place': 'CDG', 'to_place': 'DEN'}, {'from_place': 'CDG', 'to_place': 'ORD'}, {'from_place': 'CDG', 'to_place': 'DXB'}, {'from_place': 'CDG', 'to_place': 'LAX'}, {'from_place': 'CDG', 'to_place': 'IST'}, {'from_place': 'CDG', 'to_place': 'LHR'}, {'from_place': 'CDG', 'to_place': 'DEL'}, {'from_place': 'CDG', 'to_place': 'JFK'}, {'from_place': 'CDG', 'to_place': 'LAS'}, {'from_place': 'JFK', 'to_place': 'ATL'}, {'from_place': 'JFK', 'to_place': 'DFW'}, {'from_place': 'JFK', 'to_place': 'DEN'}, {'from_place': 'JFK', 'to_place': 'ORD'}, {'from_place': 'JFK', 'to_place': 'DXB'}, {'from_place': 'JFK', 'to_place': 'LAX'}, {'from_place': 'JFK', 'to_place': 'IST'}, {'from_place': 'JFK', 'to_place': 'LHR'}, {'from_place': 'JFK', 'to_place': 'DEL'}, {'from_place': 'JFK', 'to_place': 'CDG'}, {'from_place': 'JFK', 'to_place': 'LAS'}, {'from_place': 'LAS', 'to_place': 'ATL'}, {'from_place': 'LAS', 'to_place': 'DFW'}, {'from_place': 'LAS', 'to_place': 'DEN'}, {'from_place': 'LAS', 'to_place': 'ORD'}, {'from_place': 'LAS', 'to_place': 'DXB'}, {'from_place': 'LAS', 'to_place': 'LAX'}, {'from_place': 'LAS', 'to_place': 'IST'}, {'from_place': 'LAS', 'to_place': 'LHR'}, {'from_place': 'LAS', 'to_place': 'DEL'}, {'from_place': 'LAS', 'to_place': 'CDG'}, {'from_place': 'LAS', 'to_place': 'JFK'}]        # Add more routes as needed
+    ]
+
+    start_date = '2023-11-30'
+    end_date = '2023-12-1'
+
     excel_file_path = 'C:\\Users\\saran\\OneDrive\\Desktop\\mmtscraper\\google_flights_data.xlsx'
-    df.to_excel(excel_file_path, index=False)
 
+    # Check if the file exists
+    if not os.path.exists(excel_file_path):
+        # Create a new file with headers
+        with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+            pd.DataFrame().to_excel(writer, index=False)
 
+    for route in routes:
+        from_place = route['from_place']
+        to_place = route['to_place']
 
-with sync_playwright() as playwright:
-    run(playwright)
+        # Run the script for each route
+        with sync_playwright() as playwright:
+            data_df = run(playwright, from_place, to_place, start_date, end_date)
+
+        # Save the data to Excel with a sheet for each route
+        with pd.ExcelWriter(excel_file_path, engine='openpyxl', mode='a') as writer:
+            data_df.to_excel(writer, index=False, sheet_name=f'{from_place}_{to_place}')
+
+if __name__ == "__main__":
+    main()
